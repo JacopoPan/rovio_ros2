@@ -10,6 +10,12 @@ Papers:
 
 Please also have a look at the wiki: https://github.com/ethz-asl/rovio/wiki
 
+### Installation ###
+
+```sh
+WIP
+```
+<!--
 ### Install without opengl scene ###
 Dependencies:
 * ros
@@ -29,6 +35,7 @@ Additional dependencies: opengl, glut, glew (sudo apt-get install freeglut3-dev,
 
 catkin build rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON
 ```
+-->
 
 ### Euroc Datasets ###
 The rovio_node.launch file loads parameters such that ROVIO runs properly on the Euroc datasets. The datasets are available under:

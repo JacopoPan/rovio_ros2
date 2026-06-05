@@ -588,12 +588,12 @@ class RovioNode{
 
   /** \brief ROS service handler for resetting the filter to a given pose.
    */
-  bool resetToPoseServiceCallback(rovio::SrvResetToPose::Request& request,
-                                  rovio::SrvResetToPose::Response& /*response*/){
-    V3D WrWM(request.T_WM.position.x, request.T_WM.position.y,
-             request.T_WM.position.z);
-    QPD qWM(request.T_WM.orientation.w, request.T_WM.orientation.x,
-            request.T_WM.orientation.y, request.T_WM.orientation.z);
+  bool resetToPoseServiceCallback(const std::shared_ptr<rovio_interfaces::srv::SrvResetToPose::Request> request,
+                                  std::shared_ptr<rovio_interfaces::srv::SrvResetToPose::Response> /*response*/) {
+    V3D WrWM(request->t_wm.position.x, request->t_wm.position.y,
+             request->t_wm.position.z);
+    QPD qWM(request->t_wm.orientation.w, request->t_wm.orientation.x,
+            request->t_wm.orientation.y, request->t_wm.orientation.z);
     requestResetToPose(WrWM, qWM.inverted());
     return true;
   }
