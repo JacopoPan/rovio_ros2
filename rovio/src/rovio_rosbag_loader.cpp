@@ -26,20 +26,26 @@
 *
 */
 
-#include <ros/package.h>
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
 #include <memory>
 #include <iostream>
 #include <locale>
 #include <string>
 #include <Eigen/StdVector>
+#include <chrono>
+#include <iomanip>
+
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/serialization.hpp>
+#include <rclcpp/serialized_message.hpp>
+#include <rosbag2_cpp/reader.hpp>
+#include <rosbag2_cpp/writer.hpp>
+#include <rosbag2_storage/storage_options.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+
 #include "rovio/RovioFilter.hpp"
 #include "rovio/RovioNode.hpp"
-#include <boost/foreach.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/posix_time/posix_time_io.hpp>
-#define foreach BOOST_FOREACH
 
 #ifdef ROVIO_NMAXFEATURE
 static constexpr int nMax_ = ROVIO_NMAXFEATURE;
