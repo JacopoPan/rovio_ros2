@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(rovio)
 
-# Compile settings (optimized for math/speed)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
-
 # Compile settings
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,7 +14,7 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
 endif()
 
-# Rovio Configuration Parameters
+# ROVIO Configuration
 set(ROVIO_NMAXFEATURE 25 CACHE STRING "Number of features for ROVIO")
 set(ROVIO_NCAM 1 CACHE STRING "Number of enabled cameras")
 set(ROVIO_NLEVELS 4 CACHE STRING "Number of image levels for the features")
@@ -37,7 +32,7 @@ add_definitions(
 add_subdirectory(lightweight_filtering)
 include_directories(${PROJECT_SOURCE_DIR}/lightweight_filtering/include)
 
-# --- ROS2 Dependencies ---
+# ROS2 dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -55,28 +50,28 @@ find_package(rosbag2_cpp REQUIRED)
 find_package(rosbag2_storage REQUIRED)
 find_package(rovio_interfaces REQUIRED)
 
-# --- External Dependencies ---
+# External dependencies
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc features2d)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YamlCpp REQUIRED yaml-cpp>=0.5)
 
-# --- Includes ---
+# Includes
 include_directories(
     include
     ${EIGEN3_INCLUDE_DIR}
     ${YamlCpp_INCLUDE_DIRS}
 )
 
-# --- Core Library ---
+# Core library
 set(ROVIO_SRC
     src/Camera.cpp
     src/FeatureCoordinates.cpp
     src/FeatureDistance.cpp
 )
 
-# Optional Scene rendering
+# Optional scene rendering
 if(MAKE_SCENE)
     message(STATUS "Building ROVIO with openGL Scene Visualization")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAKE_SCENE=1")
@@ -123,7 +118,7 @@ ament_target_dependencies(${PROJECT_NAME}_lib
     rovio_interfaces
 )
 
-# --- Executables ---
+# Executables
 add_executable(rovio_node src/rovio_node.cpp)
 target_link_libraries(rovio_node ${PROJECT_NAME}_lib)
 ament_target_dependencies(rovio_node rclcpp rovio_interfaces)
@@ -136,7 +131,7 @@ add_executable(rovio_rosbag_loader src/rovio_rosbag_loader.cpp)
 target_link_libraries(rovio_rosbag_loader ${PROJECT_NAME}_lib)
 ament_target_dependencies(rovio_rosbag_loader rclcpp rosbag2_cpp rosbag2_storage rovio_interfaces)
 
-# --- Install Targets ---
+# Install targets
 install(TARGETS
     ${PROJECT_NAME}_lib
     rovio_node
@@ -157,7 +152,7 @@ install(DIRECTORY cfg/
     DESTINATION share/${PROJECT_NAME}/cfg
 )
 
-# --- Export for downstream packages ---
+# Export for downstream packages
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME}_lib)
 ament_export_dependencies(
@@ -176,7 +171,7 @@ ament_export_dependencies(
     rovio_interfaces
 )
 
-# --- Testing ---
+# Tests
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
 

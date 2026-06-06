@@ -4,6 +4,7 @@
   <name>rovio</name>
   <version>0.0.0</version>
   <description>Robust Visual Inertial Odometry (ROVIO)</description>
+  <author>bloeschm</author>
   <maintainer email="bloeschm@ethz.ch">bloeschm</maintainer>
   <license>BSD License</license>
 
