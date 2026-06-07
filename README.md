@@ -13,6 +13,20 @@ Please also have a look at the wiki: https://github.com/ethz-asl/rovio/wiki
 ### Installation ###
 
 ```sh
+sudo apt update
+sudo apt install -y --no-install-recommends freeglut3-dev libglew-dev
+
+git clone https://github.com/ethz-asl/kindr.git && cd kindr
+mkdir build && cd build
+cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+sudo make install
+
+mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
+git clone https://github.com/JacopoPan/rovio_ros2.git
+cd ..
+source /opt/ros/humble/setup.bash
+colcon build --packages-select rovio_interfaces --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
+# colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
 WIP
 ```
 <!--
