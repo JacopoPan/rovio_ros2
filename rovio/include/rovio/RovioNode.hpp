@@ -159,7 +159,6 @@ class RovioNode{
   sensor_msgs::msg::PointCloud2 patchMsg_;
   visualization_msgs::msg::Marker markerMsg_;
   sensor_msgs::msg::Imu imuBiasMsg_;
-  int msgSeq_;
 
   // Rovio outputs and coordinate transformations
   typedef StandardOutput mtOutput;
@@ -258,7 +257,6 @@ class RovioNode{
 
     odometryMsg_.header.frame_id = world_frame_;
     odometryMsg_.child_frame_id = imu_frame_;
-    msgSeq_ = 1;
     for(int camID=0;camID<mtState::nCam_;camID++){
       extrinsicsMsg_[camID].header.frame_id = imu_frame_;
     }
@@ -746,7 +744,6 @@ class RovioNode{
           // Compute covariance of output
           imuOutputCT_.transformCovMat(state,cov,imuOutputCov_);
 
-          odometryMsg_.header.seq = msgSeq_;
           odometryMsg_.header.stamp = safe_time;
           odometryMsg_.pose.pose.position.x = imuOutput_.WrWB()(0);
           odometryMsg_.pose.pose.position.y = imuOutput_.WrWB()(1);
@@ -786,7 +783,6 @@ class RovioNode{
           // Compute covariance of output
           imuOutputCT_.transformCovMat(state,cov,imuOutputCov_);
 
-          estimatedPoseWithCovarianceStampedMsg_.header.seq = msgSeq_;
           estimatedPoseWithCovarianceStampedMsg_.header.stamp = safe_time;
           estimatedPoseWithCovarianceStampedMsg_.pose.pose.position.x = imuOutput_.WrWB()(0);
           estimatedPoseWithCovarianceStampedMsg_.pose.pose.position.y = imuOutput_.WrWB()(1);
@@ -812,7 +808,6 @@ class RovioNode{
 
         // Send IMU pose message.
         if(pubTransform_->get_subscription_count() > 0 || forceTransformPublishing_){
-          transformMsg_.header.seq = msgSeq_;
           transformMsg_.header.stamp = safe_time;
           transformMsg_.transform.translation.x = imuOutput_.WrWB()(0);
           transformMsg_.transform.translation.y = imuOutput_.WrWB()(1);
@@ -828,7 +823,6 @@ class RovioNode{
           if (mpPoseUpdate_->inertialPoseIndex_ >= 0) {
             Eigen::Vector3d IrIW = state.poseLin(mpPoseUpdate_->inertialPoseIndex_);
             QPD qWI = state.poseRot(mpPoseUpdate_->inertialPoseIndex_);
-            T_J_W_Msg_.header.seq = msgSeq_;
             T_J_W_Msg_.header.stamp = safe_time;
             T_J_W_Msg_.transform.translation.x = IrIW(0);
             T_J_W_Msg_.transform.translation.y = IrIW(1);
@@ -844,7 +838,6 @@ class RovioNode{
         // Publish Extrinsics
         for(int camID=0;camID<mtState::nCam_;camID++){
           if(pubExtrinsics_[camID]->get_subscription_count() > 0 || forceExtrinsicsPublishing_){
-            extrinsicsMsg_[camID].header.seq = msgSeq_;
             extrinsicsMsg_[camID].header.stamp = safe_time;
             extrinsicsMsg_[camID].pose.pose.position.x = state.MrMC(camID)(0);
             extrinsicsMsg_[camID].pose.pose.position.y = state.MrMC(camID)(1);
@@ -868,7 +861,6 @@ class RovioNode{
 
         // Publish IMU biases
         if(pubImuBias_->get_subscription_count() > 0 || forceImuBiasPublishing_){
-          imuBiasMsg_.header.seq = msgSeq_;
           imuBiasMsg_.header.stamp = safe_time;
           imuBiasMsg_.angular_velocity.x = state.gyb()(0);
           imuBiasMsg_.angular_velocity.y = state.gyb()(1);
@@ -891,9 +883,7 @@ class RovioNode{
 
         // PointCloud message.
         if(pubPcl_->get_subscription_count() > 0 || pubMarkers_->get_subscription_count() > 0 || forcePclPublishing_ || forceMarkersPublishing_){
-          pclMsg_.header.seq = msgSeq_;
           pclMsg_.header.stamp = safe_time;
-          markerMsg_.header.seq = msgSeq_;
           markerMsg_.header.stamp = safe_time;
           markerMsg_.points.clear();
           float badPoint = std::numeric_limits<float>::quiet_NaN();  // Invalid point.
@@ -998,7 +988,6 @@ class RovioNode{
           pubMarkers_->publish(markerMsg_);
         }
         if(pubPatch_->get_subscription_count() > 0 || forcePatchPublishing_){
-          patchMsg_.header.seq = msgSeq_;
           patchMsg_.header.stamp = safe_time;
           int offset = 0;
           for (unsigned int i=0;i<mtState::nMax_; i++, offset += patchMsg_.point_step) {
