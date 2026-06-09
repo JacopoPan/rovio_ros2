@@ -145,6 +145,58 @@
     markerMsg_.color.b = 0.0;
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   /** \brief Tests the functionality of the rovio node.
    *
    *  @todo debug with   doVECalibration = false and depthType = 0
@@ -245,128 +297,6 @@
     }
 
     delete mpTestFilterState;
-  }
-
-  /** \brief Callback for IMU-Messages. Adds IMU measurements (as prediction measurements) to the filter.
-   */
-  void imuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg){
-    std::lock_guard<std::mutex> lock(m_filter_);
-    predictionMeas_.template get<mtPredictionMeas::_acc>() = Eigen::Vector3d(imu_msg->linear_acceleration.x,imu_msg->linear_acceleration.y,imu_msg->linear_acceleration.z);
-    predictionMeas_.template get<mtPredictionMeas::_gyr>() = Eigen::Vector3d(imu_msg->angular_velocity.x,imu_msg->angular_velocity.y,imu_msg->angular_velocity.z);
-    if(init_state_.isInitialized()){
-      mpFilter_->addPredictionMeas(predictionMeas_,imu_msg->header.stamp.toSec());
-      updateAndPublish();
-    } else {
-      switch(init_state_.state_) {
-        case FilterInitializationState::State::WaitForInitExternalPose: {
-          std::cout << "-- Filter: Initializing using external pose ..." << std::endl;
-          mpFilter_->resetWithPose(init_state_.WrWM_, init_state_.qMW_, imu_msg->header.stamp.toSec());
-          break;
-        }
-        case FilterInitializationState::State::WaitForInitUsingAccel: {
-          std::cout << "-- Filter: Initializing using accel. measurement ..." << std::endl;
-          mpFilter_->resetWithAccelerometer(predictionMeas_.template get<mtPredictionMeas::_acc>(),imu_msg->header.stamp.toSec());
-          break;
-        }
-        default: {
-          std::cout << "Unhandeld initialization type." << std::endl;
-          abort();
-          break;
-        }
-      }
-
-      std::cout << std::setprecision(12);
-      std::cout << "-- Filter: Initialized at t = " << imu_msg->header.stamp.toSec() << std::endl;
-      init_state_.state_ = FilterInitializationState::State::Initialized;
-    }
-  }
-
-  /** \brief Image callback. Adds images (as update measurements) to the filter.
-   *
-   *   @param img   - Image message.
-   *   @param camID - Camera ID.
-   */
-  void imgCallback(const sensor_msgs::ImageConstPtr & img, const int camID = 0){
-    // Get image from msg
-    cv_bridge::CvImagePtr cv_ptr;
-    try {
-      cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::TYPE_8UC1);
-    } catch (cv_bridge::Exception& e) {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
-    cv::Mat cv_img;
-    cv_ptr->image.copyTo(cv_img);
-    if(init_state_.isInitialized() && !cv_img.empty()){
-      double msgTime = img->header.stamp.toSec();
-      if(msgTime != imgUpdateMeas_.template get<mtImgMeas::_aux>().imgTime_){
-        for(int i=0;i<mtState::nCam_;i++){
-          if(imgUpdateMeas_.template get<mtImgMeas::_aux>().isValidPyr_[i]){
-            std::cout << "    \033[31mFailed Synchronization of Camera Frames, t = " << msgTime << "\033[0m" << std::endl;
-          }
-        }
-        imgUpdateMeas_.template get<mtImgMeas::_aux>().reset(msgTime);
-      }
-      imgUpdateMeas_.template get<mtImgMeas::_aux>().pyr_[camID].computeFromImage(cv_img,true);
-      imgUpdateMeas_.template get<mtImgMeas::_aux>().isValidPyr_[camID] = true;
-
-      if(imgUpdateMeas_.template get<mtImgMeas::_aux>().areAllValid()){
-        mpFilter_->template addUpdateMeas<0>(imgUpdateMeas_,msgTime);
-        imgUpdateMeas_.template get<mtImgMeas::_aux>().reset(msgTime);
-        updateAndPublish();
-      }
-    }
-  }
-
-  /** \brief Callback for external groundtruth as TransformStamped
-   *
-   *  @param transform - Groundtruth message.
-   */
-  void groundtruthCallback(const geometry_msgs::TransformStamped::ConstPtr& transform){
-    std::lock_guard<std::mutex> lock(m_filter_);
-    if(init_state_.isInitialized()){
-      Eigen::Vector3d JrJV(transform->transform.translation.x,transform->transform.translation.y,transform->transform.translation.z);
-      poseUpdateMeas_.pos() = JrJV;
-      QPD qJV(transform->transform.rotation.w,transform->transform.rotation.x,transform->transform.rotation.y,transform->transform.rotation.z);
-      poseUpdateMeas_.att() = qJV.inverted();
-      mpFilter_->template addUpdateMeas<1>(poseUpdateMeas_,transform->header.stamp.toSec()+mpPoseUpdate_->timeOffset_);
-      updateAndPublish();
-    }
-  }
-
-  /** \brief Callback for external groundtruth as Odometry
-   *
-   * @param odometry - Groundtruth message.
-   */
-  void groundtruthOdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry) {
-    std::lock_guard<std::mutex> lock(m_filter_);
-    if(init_state_.isInitialized()) {
-      Eigen::Vector3d JrJV(odometry->pose.pose.position.x,odometry->pose.pose.position.y,odometry->pose.pose.position.z);
-      poseUpdateMeas_.pos() = JrJV;
-
-      QPD qJV(odometry->pose.pose.orientation.w,odometry->pose.pose.orientation.x,odometry->pose.pose.orientation.y,odometry->pose.pose.orientation.z);
-      poseUpdateMeas_.att() = qJV.inverted();
-
-      const Eigen::Matrix<double,6,6> measuredCov = Eigen::Map<const Eigen::Matrix<double,6,6,Eigen::RowMajor>>(odometry->pose.covariance.data());
-      poseUpdateMeas_.measuredCov() = measuredCov;
-
-      mpFilter_->template addUpdateMeas<1>(poseUpdateMeas_,odometry->header.stamp.toSec()+mpPoseUpdate_->timeOffset_);
-      updateAndPublish();
-    }
-  }
-
-  /** \brief Callback for external velocity measurements
-   *
-   *  @param transform - Groundtruth message.
-   */
-  void velocityCallback(const geometry_msgs::TwistStamped::ConstPtr& velocity){
-    std::lock_guard<std::mutex> lock(m_filter_);
-    if(init_state_.isInitialized()){
-      Eigen::Vector3d AvM(velocity->twist.linear.x,velocity->twist.linear.y,velocity->twist.linear.z);
-      velocityUpdateMeas_.vel() = AvM;
-      mpFilter_->template addUpdateMeas<2>(velocityUpdateMeas_,velocity->header.stamp.toSec());
-      updateAndPublish();
-    }
   }
 
   /** \brief Executes the update step of the filter and publishes the updated data.
