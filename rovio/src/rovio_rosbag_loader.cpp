@@ -139,17 +139,17 @@ int main(int argc, char** argv){
   std::cout << std::endl;
 
   rosbag2_cpp::Reader bagIn;
-  std::string rosbag_filename = "dataset.bag";
-  node->declare_parameter("rosbag_filename", rosbag_filename);
-  node->get_parameter("rosbag_filename", rosbag_filename);
-  bagIn.open(rosbag_filename);
+  std::string rosbag_path = "dataset_ros2";
+  node->declare_parameter("rosbag_path", rosbag_path);
+  node->get_parameter("rosbag_path", rosbag_path);
+  bagIn.open(rosbag_path);
 
-  std::size_t found = rosbag_filename.find_last_of("/");
-  std::string file_path = rosbag_filename.substr(0,found);
-  std::string file_name = rosbag_filename.substr(found+1);
-  if(file_path==rosbag_filename){
-    file_path = ".";
-    file_name = rosbag_filename;
+  std::size_t found = rosbag_path.find_last_of("/");
+  std::string base_path = rosbag_path.substr(0, found);
+  std::string bag_dir_name = rosbag_path.substr(found + 1);
+  if(base_path == rosbag_path){
+    base_path = ".";
+    bag_dir_name = rosbag_path;
   }
 
   // Modern C++ Time Formatting (Replaces Boost)
@@ -159,21 +159,21 @@ int main(int argc, char** argv){
   stream << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d-%H-%M-%S")
          << "_" << nMax_ << "_" << nLevels_ << "_" << patchSize_ << "_" << nCam_  << "_" << nPose_;
 
-  std::string filename_out = file_path + "/rovio/" + stream.str();
-  node->declare_parameter("filename_out", filename_out);
-  node->get_parameter("filename_out", filename_out);
+  std::string output_base_path = base_path + "/rovio/" + stream.str();
+  node->declare_parameter("output_base_path", output_base_path);
+  node->get_parameter("output_base_path", output_base_path);
 
-  // ROS 2 bags are directories, so we name the output folder _bag instead of .bag to avoid DB conflicts
-  std::string rosbag_filename_out = filename_out + "_bag";
-  std::string info_filename_out = filename_out + ".info";
-  std::cout << "Storing output to: " << rosbag_filename_out << std::endl;
+  // ROS 2 bags are directories, so we use _bag
+  std::string rosbag_out_dir = output_base_path + "_bag";
+  std::string info_filename_out = output_base_path + ".info";
+  std::cout << "Storing output to: " << rosbag_out_dir << std::endl;
 
   // Determine if we need to write at all
   bool forceAppendToBag = rovioNode.forceOdometryPublishing_ || rovioNode.forceTransformPublishing_ || rovioNode.forceExtrinsicsPublishing_ || rovioNode.forceImuBiasPublishing_ || rovioNode.forcePclPublishing_ || rovioNode.forceMarkersPublishing_ || rovioNode.forcePatchPublishing_;
   std::unique_ptr<rosbag2_cpp::Writer> bagOut;
   if(forceAppendToBag){
     bagOut = std::make_unique<rosbag2_cpp::Writer>();
-    bagOut->open(rosbag_filename_out);
+    bagOut->open(rosbag_out_dir);
   }
 
   // Copy info

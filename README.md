@@ -14,7 +14,7 @@ Please also have a look at the wiki: https://github.com/ethz-asl/rovio/wiki
 
 ```sh
 sudo apt update
-sudo apt install -y --no-install-recommends freeglut3-dev libglew-dev
+sudo apt install -y --no-install-recommends freeglut3-dev libglew-dev valgrind
 
 git clone https://github.com/ethz-asl/kindr.git && cd kindr
 mkdir build && cd build
@@ -26,6 +26,9 @@ git clone --recurse-submodules -b feat/ros2 https://github.com/JacopoPan/rovio_r
 cd ..
 source /opt/ros/humble/setup.bash
 colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
+
+source /aas/temp_dev_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
+source /aas/temp_dev_ws/install/setup.bash && ros2 launch rovio valgrind_rovio.launch.py # Add option '-mno-avx512f' *after* '-march=native'
 ```
 <!--
 ### Install without opengl scene ###
