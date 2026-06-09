@@ -1,3 +1,6 @@
+> [!NOTE]
+> This is a 1-to-1 ROS2 translation of the original ROS1 repo: https://github.com/ethz-asl/rovio
+
 # README #
 
 This repository contains the ROVIO (Robust Visual Inertial Odometry) framework. The code is open-source (BSD License). Please remember that it is strongly coupled to on-going research and thus some parts are not fully mature yet. Furthermore, the code will also be subject to changes in the future which could include greater re-factoring of some parts.
@@ -7,8 +10,6 @@ Video: https://youtu.be/ZMAISVy-6ao
 Papers:
 * http://dx.doi.org/10.3929/ethz-a-010566547 (IROS 2015)
 * http://dx.doi.org/10.1177/0278364917728574 (IJRR 2017)
-
-Please also have a look at the wiki: https://github.com/ethz-asl/rovio/wiki
 
 ### Installation ###
 
@@ -27,22 +28,10 @@ cd ..
 source /opt/ros/humble/setup.bash
 colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
 
-source /aas/temp_dev_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
-source /aas/temp_dev_ws/install/setup.bash && ros2 launch rovio valgrind_rovio.launch.py # Add option '-mno-avx512f' *after* '-march=native'
+source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
+source /aas/ros2_ws/install/setup.bash && ros2 launch rovio valgrind_rovio.launch.py # Add option '-mno-avx512f' *after* '-march=native'
 ```
 <!--
-### Install without opengl scene ###
-Dependencies:
-* ros
-* kindr (https://github.com/ethz-asl/kindr)
-* lightweight_filtering (as submodule, use "git submodule update --init --recursive")
-
-```
-#!command
-
-catkin build rovio --cmake-args -DCMAKE_BUILD_TYPE=Release
-```
-
 ### Install with opengl scene ###
 Additional dependencies: opengl, glut, glew (sudo apt-get install freeglut3-dev, sudo apt-get install libglew-dev)
 ```
@@ -53,8 +42,17 @@ catkin build rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON
 -->
 
 ### Euroc Datasets ###
-The rovio_node.launch file loads parameters such that ROVIO runs properly on the Euroc datasets. The datasets are available under:
-http://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets
+The rovio_node.launch file loads parameters such that ROVIO runs properly on the Euroc datasets.
+
+The datasets are available at: https://www.research-collection.ethz.ch/entities/researchdata/bcaf173e-5dac-484b-bc37-faf97a594f1f
+
+```sh
+pip install rosbags
+# Download and unzip, for example, "Vicon Room 2 Datasets (ZIP, 5734.81 MB)"
+cd vicon_room2/V2_01_easy/
+rosbags-convert --src V2_01_easy.bag --dst V2_01_easy_ros2 --dst-version 5 --dst-typestore ros2_humble
+source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_rosbag_node.launch.py # Edit path as appropriate
+```
 
 ### Further notes ###
 * Camera matrix and distortion parameters should be provided by a yaml file or loaded through rosparam
