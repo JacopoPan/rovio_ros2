@@ -191,7 +191,152 @@ class RovioNode{
       : node_(node), mpFilter_(mpFilter), transformFeatureOutputCT_(&mpFilter->multiCamera_), landmarkOutputImuCT_(&mpFilter->multiCamera_),
         cameraOutputCov_((int)(mtOutput::D_),(int)(mtOutput::D_)), featureOutputCov_((int)(FeatureOutput::D_),(int)(FeatureOutput::D_)), landmarkOutputCov_(3,3),
         featureOutputReadableCov_((int)(FeatureOutputReadable::D_),(int)(FeatureOutputReadable::D_)){
-    //
+    #ifndef NDEBUG
+      RCLCPP_WARN(node_->get_logger(), "====================== Debug Mode ======================");
+    #endif
+    mpImgUpdate_ = &std::get<0>(mpFilter_->mUpdates_);
+    mpPoseUpdate_ = &std::get<1>(mpFilter_->mUpdates_);
+    forceOdometryPublishing_ = false;
+    forcePoseWithCovariancePublishing_ = false;
+    forceTransformPublishing_ = false;
+    forceExtrinsicsPublishing_ = false;
+    forceImuBiasPublishing_ = false;
+    forcePclPublishing_ = false;
+    forceMarkersPublishing_ = false;
+    forcePatchPublishing_ = false;
+    gotFirstMessages_ = false;
+
+    // Subscribe topics
+    subImu_ = node_->create_subscription<sensor_msgs::msg::Imu>("imu0", 1000, std::bind(&RovioNode::imuCallback, this, std::placeholders::_1));
+    subImg0_ = node_->create_subscription<sensor_msgs::msg::Image>("cam0/image_raw", 1000, std::bind(&RovioNode::imgCallback0, this, std::placeholders::_1));
+    subImg1_ = node_->create_subscription<sensor_msgs::msg::Image>("cam1/image_raw", 1000, std::bind(&RovioNode::imgCallback1, this, std::placeholders::_1));
+    subGroundtruth_ = node_->create_subscription<geometry_msgs::msg::TransformStamped>("pose", 1000, std::bind(&RovioNode::groundtruthCallback, this, std::placeholders::_1));
+    subGroundtruthOdometry_ = node_->create_subscription<nav_msgs::msg::Odometry>("odometry", 1000, std::bind(&RovioNode::groundtruthOdometryCallback, this, std::placeholders::_1));
+    subVelocity_ = node_->create_subscription<geometry_msgs::msg::TwistStamped>("abss/twist", 1000, std::bind(&RovioNode::velocityCallback, this, std::placeholders::_1));
+
+    // Initialize ROS service servers
+    srvResetFilter_ = node_->create_service<std_srvs::srv::Empty>("rovio/reset", std::bind(&RovioNode::resetServiceCallback, this, std::placeholders::_1, std::placeholders::_2));
+    srvResetToPoseFilter_ = node_->create_service<rovio_interfaces::srv::SrvResetToPose>("rovio/reset_to_pose", std::bind(&RovioNode::resetToPoseServiceCallback, this, std::placeholders::_1, std::placeholders::_2));
+
+    // Initialize TF Broadcaster
+    tb_ = std::make_unique<tf2_ros::TransformBroadcaster>(*node_);
+
+    // Advertise topics
+    pubTransform_ = node_->create_publisher<geometry_msgs::msg::TransformStamped>("rovio/transform", 1);
+    pubOdometry_ = node_->create_publisher<nav_msgs::msg::Odometry>("rovio/odometry", 1);
+    pubPoseWithCovStamped_ = node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("rovio/pose_with_covariance_stamped", 1);
+    pubPcl_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>("rovio/pcl", 1);
+    pubPatch_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>("rovio/patch", 1);
+    pubMarkers_ = node_->create_publisher<visualization_msgs::msg::Marker>("rovio/markers", 1);
+
+    pub_T_J_W_transform = node_->create_publisher<geometry_msgs::msg::TransformStamped>("rovio/T_G_W", 1);
+    for(int camID=0;camID<mtState::nCam_;camID++){
+      pubExtrinsics_[camID] = node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("rovio/extrinsics" + std::to_string(camID), 1);
+    }
+    pubImuBias_ = node_->create_publisher<sensor_msgs::msg::Imu>("rovio/imu_biases", 1);
+
+    // Handle coordinate frame naming
+    map_frame_ = "/map";
+    world_frame_ = "/world";
+    camera_frame_ = "/camera";
+    imu_frame_ = "/imu";
+    node_->declare_parameter("map_frame", map_frame_);
+    node_->get_parameter("map_frame", map_frame_);
+    node_->declare_parameter("world_frame", world_frame_);
+    node_->get_parameter("world_frame", world_frame_);
+    node_->declare_parameter("camera_frame", camera_frame_);
+    node_->get_parameter("camera_frame", camera_frame_);
+    node_->declare_parameter("imu_frame", imu_frame_);
+    node_->get_parameter("imu_frame", imu_frame_);
+
+    // Initialize messages
+    transformMsg_.header.frame_id = world_frame_;
+    transformMsg_.child_frame_id = imu_frame_;
+
+    T_J_W_Msg_.child_frame_id = world_frame_;
+    T_J_W_Msg_.header.frame_id = map_frame_;
+
+    odometryMsg_.header.frame_id = world_frame_;
+    odometryMsg_.child_frame_id = imu_frame_;
+    msgSeq_ = 1;
+    for(int camID=0;camID<mtState::nCam_;camID++){
+      extrinsicsMsg_[camID].header.frame_id = imu_frame_;
+    }
+    imuBiasMsg_.header.frame_id = world_frame_;
+    imuBiasMsg_.orientation.x = 0;
+    imuBiasMsg_.orientation.y = 0;
+    imuBiasMsg_.orientation.z = 0;
+    imuBiasMsg_.orientation.w = 1;
+    for(int i=0;i<9;i++){
+      imuBiasMsg_.orientation_covariance[i] = 0.0;
+    }
+
+    // PointCloud message.
+    pclMsg_.header.frame_id = imu_frame_;
+    pclMsg_.height = 1;               // Unordered point cloud.
+    pclMsg_.width  = mtState::nMax_;  // Number of features/points.
+    const int nFieldsPcl = 18;
+    std::string namePcl[nFieldsPcl] = {"id","camId","rgb","status","x","y","z","b_x","b_y","b_z","d","c_00","c_01","c_02","c_11","c_12","c_22","c_d"};
+    int sizePcl[nFieldsPcl] = {4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4};
+    int countPcl[nFieldsPcl] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    int datatypePcl[nFieldsPcl] = {sensor_msgs::msg::PointField::INT32,sensor_msgs::msg::PointField::INT32,sensor_msgs::msg::PointField::UINT32,sensor_msgs::msg::PointField::UINT32,
+        sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,
+        sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,
+        sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32};
+    pclMsg_.fields.resize(nFieldsPcl);
+    int byteCounter = 0;
+    for(int i=0;i<nFieldsPcl;i++){
+      pclMsg_.fields[i].name     = namePcl[i];
+      pclMsg_.fields[i].offset   = byteCounter;
+      pclMsg_.fields[i].count    = countPcl[i];
+      pclMsg_.fields[i].datatype = datatypePcl[i];
+      byteCounter += sizePcl[i]*countPcl[i];
+    }
+    pclMsg_.point_step = byteCounter;
+    pclMsg_.row_step = pclMsg_.point_step * pclMsg_.width;
+    pclMsg_.data.resize(pclMsg_.row_step * pclMsg_.height);
+    pclMsg_.is_dense = false;
+
+    // PointCloud message.
+    patchMsg_.header.frame_id = "";
+    patchMsg_.height = 1;               // Unordered point cloud.
+    patchMsg_.width  = mtState::nMax_;  // Number of features/points.
+    const int nFieldsPatch = 5;
+    std::string namePatch[nFieldsPatch] = {"id","patch","dx","dy","error"};
+    int sizePatch[nFieldsPatch] = {4,4,4,4,4};
+    int countPatch[nFieldsPatch] = {1,mtState::nLevels_*mtState::patchSize_*mtState::patchSize_,mtState::nLevels_*mtState::patchSize_*mtState::patchSize_,mtState::nLevels_*mtState::patchSize_*mtState::patchSize_,mtState::nLevels_*mtState::patchSize_*mtState::patchSize_};
+    int datatypePatch[nFieldsPatch] = {sensor_msgs::msg::PointField::INT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32,sensor_msgs::msg::PointField::FLOAT32};
+    patchMsg_.fields.resize(nFieldsPatch);
+    byteCounter = 0;
+    for(int i=0;i<nFieldsPatch;i++){
+      patchMsg_.fields[i].name     = namePatch[i];
+      patchMsg_.fields[i].offset   = byteCounter;
+      patchMsg_.fields[i].count    = countPatch[i];
+      patchMsg_.fields[i].datatype = datatypePatch[i];
+      byteCounter += sizePatch[i]*countPatch[i];
+    }
+    patchMsg_.point_step = byteCounter;
+    patchMsg_.row_step = patchMsg_.point_step * patchMsg_.width;
+    patchMsg_.data.resize(patchMsg_.row_step * patchMsg_.height);
+    patchMsg_.is_dense = false;
+
+    // Marker message (vizualization of uncertainty)
+    markerMsg_.header.frame_id = imu_frame_;
+    markerMsg_.id = 0;
+    markerMsg_.type = visualization_msgs::msg::Marker::LINE_LIST;
+    markerMsg_.action = visualization_msgs::msg::Marker::ADD;
+    markerMsg_.pose.position.x = 0;
+    markerMsg_.pose.position.y = 0;
+    markerMsg_.pose.position.z = 0;
+    markerMsg_.pose.orientation.x = 0.0;
+    markerMsg_.pose.orientation.y = 0.0;
+    markerMsg_.pose.orientation.z = 0.0;
+    markerMsg_.pose.orientation.w = 1.0;
+    markerMsg_.scale.x = 0.04; // Line width.
+    markerMsg_.color.a = 1.0;
+    markerMsg_.color.r = 0.0;
+    markerMsg_.color.g = 1.0;
+    markerMsg_.color.b = 0.0;
   }
 
   /** \brief Destructor
