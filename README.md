@@ -1,17 +1,12 @@
 > [!NOTE]
 > This is a 1-to-1 ROS2 translation of the original ROS1 repo: https://github.com/ethz-asl/rovio
 
-# README #
+# ROVIO ROS2
 
-This repository contains the ROVIO (Robust Visual Inertial Odometry) framework. The code is open-source (BSD License). Please remember that it is strongly coupled to on-going research and thus some parts are not fully mature yet. Furthermore, the code will also be subject to changes in the future which could include greater re-factoring of some parts.
-
+This repository contains the ROVIO (Robust Visual Inertial Odometry) framework. The code is open-source (BSD License).
 Video: https://youtu.be/ZMAISVy-6ao
 
-Papers:
-* http://dx.doi.org/10.3929/ethz-a-010566547 (IROS 2015)
-* http://dx.doi.org/10.1177/0278364917728574 (IJRR 2017)
-
-### Installation ###
+## Installation
 
 ```sh
 sudo apt update
@@ -41,7 +36,7 @@ catkin build rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON
 ```
 -->
 
-### Euroc Datasets ###
+## Euroc Datasets
 The rovio_node.launch file loads parameters such that ROVIO runs properly on the Euroc datasets.
 
 The datasets are available at: [www.research-collection.ethz.ch](https://www.research-collection.ethz.ch/entities/researchdata/bcaf173e-5dac-484b-bc37-faf97a594f1f)
@@ -54,7 +49,12 @@ rosbags-convert --src V2_01_easy.bag --dst V2_01_easy_ros2 --dst-version 5 --dst
 source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_rosbag_node.launch.py rosbag_path:=/absolute/path/to/V2_01_easy_ros2
 ```
 
-### Further notes ###
+## Further Notes
+
 * Camera matrix and distortion parameters should be provided by a yaml file or loaded through rosparam
 * The cfg/rovio.info provides most parameters for rovio. The camera extrinsics qCM (quaternion from IMU to camera frame, Hamilton-convention) and MrMC (Translation between IMU and Camera expressed in the IMU frame) should also be set there. They are being estimated during runtime so only a rough guess should be sufficient.
 * Especially for application with little motion fixing the IMU-camera extrinsics can be beneficial. This can be done by setting the parameter doVECalibration to false. Please be carefull that the overall robustness and accuracy can be very sensitive to bad extrinsic calibrations.
+
+Papers:
+* http://dx.doi.org/10.3929/ethz-a-010566547 (IROS 2015)
+* http://dx.doi.org/10.1177/0278364917728574 (IJRR 2017)
