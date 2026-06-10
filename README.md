@@ -20,7 +20,7 @@ sudo make install
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
 git clone --recurse-submodules -b feat/ros2 https://github.com/JacopoPan/rovio_ros2.git
 cd ..
-source /opt/ros/humble/setup.bash
+source /opt/ros/humble/setup.bash # Assumes ROS2 Humble was installed: https://docs.ros.org/en/humble/Installation.html
 colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
 
 source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
