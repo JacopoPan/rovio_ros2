@@ -44,14 +44,14 @@ catkin build rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON
 ### Euroc Datasets ###
 The rovio_node.launch file loads parameters such that ROVIO runs properly on the Euroc datasets.
 
-The datasets are available at: https://www.research-collection.ethz.ch/entities/researchdata/bcaf173e-5dac-484b-bc37-faf97a594f1f
+The datasets are available at: [www.research-collection.ethz.ch](https://www.research-collection.ethz.ch/entities/researchdata/bcaf173e-5dac-484b-bc37-faf97a594f1f)
 
 ```sh
 pip install rosbags
 # Download and unzip, for example, "Vicon Room 2 Datasets (ZIP, 5734.81 MB)"
 cd vicon_room2/V2_01_easy/
 rosbags-convert --src V2_01_easy.bag --dst V2_01_easy_ros2 --dst-version 5 --dst-typestore ros2_humble
-source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_rosbag_node.launch.py # Edit path as appropriate
+source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_rosbag_node.launch.py rosbag_path:=/absolute/path/to/V2_01_easy_ros2
 ```
 
 ### Further notes ###
