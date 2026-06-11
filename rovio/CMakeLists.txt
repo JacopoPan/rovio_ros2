@@ -102,7 +102,7 @@ target_link_libraries(${PROJECT_NAME}_lib
     ${OpenCV_LIBRARIES}
 )
 if(MAKE_SCENE)
-    target_link_libraries(${PROJECT_NAME}_lib ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${GLEW_LIBRARY})
+    target_link_libraries(${PROJECT_NAME}_lib ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${GLEW_LIBRARIES})
 endif()
 
 # Link ROS2 libraries
@@ -156,6 +156,10 @@ install(DIRECTORY launch/
 
 install(DIRECTORY cfg/
     DESTINATION share/${PROJECT_NAME}/cfg
+)
+
+install(DIRECTORY shaders/
+    DESTINATION share/${PROJECT_NAME}/shaders
 )
 
 # Export for downstream packages

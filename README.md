@@ -21,20 +21,11 @@ mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
 git clone --recurse-submodules -b main https://github.com/JacopoPan/rovio_ros2.git
 cd ..
 source /opt/ros/humble/setup.bash # Assumes ROS2 Humble was installed: https://docs.ros.org/en/humble/Installation.html
-colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
+colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DMAKE_SCENE=ON -DCMAKE_BUILD_TYPE=Release
 
 source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
 source /aas/ros2_ws/install/setup.bash && ros2 launch rovio valgrind_rovio.launch.py # Re-build with option -DENABLE_VALGRIND_COMPATIBILITY=ON
 ```
-<!--
-### Install with opengl scene ###
-Additional dependencies: opengl, glut, glew (sudo apt-get install freeglut3-dev, sudo apt-get install libglew-dev)
-```
-#!command
-
-catkin build rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON
-```
--->
 
 ## Euroc Datasets
 The rovio_node.launch file loads parameters such that ROVIO runs properly on the Euroc datasets.
@@ -47,6 +38,11 @@ pip install rosbags
 cd vicon_room2/V2_01_easy/
 rosbags-convert --src V2_01_easy.bag --dst V2_01_easy_ros2 --dst-version 5 --dst-typestore ros2_humble
 source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_rosbag_node.launch.py rosbag_path:=/absolute/path/to/V2_01_easy_ros2
+
+# Alternatively, in one terminal, run:
+source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
+# In a second terminal:
+ros2 bag play /absolute/path/to/V2_01_easy_ros2
 ```
 
 ## Further Notes
