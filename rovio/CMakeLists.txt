@@ -5,6 +5,8 @@ project(rovio)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(ENABLE_VALGRIND_COMPATIBILITY "Disable AVX-512 to allow Valgrind memory profiling" OFF)
+
 # Architecture-specific optimization
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64|ARM64")
     message(STATUS "Building for L4T/ARM64 system with high-performance compile flags")
@@ -12,6 +14,10 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64|ARM64")
 else()
     message(STATUS "Building for x86/non-arm system")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
+    if(ENABLE_VALGRIND_COMPATIBILITY)
+        message(STATUS "Valgrind compatibility mode ON: Disabling AVX-512 instructions")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-avx512f")
+    endif()
 endif()
 
 # ROVIO Configuration

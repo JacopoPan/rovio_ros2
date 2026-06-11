@@ -24,7 +24,7 @@ source /opt/ros/humble/setup.bash # Assumes ROS2 Humble was installed: https://d
 colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
 
 source /aas/ros2_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
-source /aas/ros2_ws/install/setup.bash && ros2 launch rovio valgrind_rovio.launch.py # Add option '-mno-avx512f' *after* '-march=native'
+source /aas/ros2_ws/install/setup.bash && ros2 launch rovio valgrind_rovio.launch.py # Re-build with option -DENABLE_VALGRIND_COMPATIBILITY=ON
 ```
 <!--
 ### Install with opengl scene ###
