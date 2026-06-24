@@ -74,8 +74,8 @@ class FeatureTrackerNode{
    */
   FeatureTrackerNode(std::shared_ptr<rclcpp::Node> node): node_(node), fsm_(&multiCamera_){
     static_assert(l2>=l1, "l2 must be larger than l1");
-    subImu_ = node_->create_subscription<sensor_msgs::msg::Imu>("imuMeas", 1000, std::bind(&FeatureTrackerNode::imuCallback, this, std::placeholders::_1));
-    subImg_ = node_->create_subscription<sensor_msgs::msg::Image>("/cam0/image_raw", 1000, std::bind(&FeatureTrackerNode::imgCallback, this, std::placeholders::_1));
+    subImu_ = node_->create_subscription<sensor_msgs::msg::Imu>("imuMeas", rclcpp::SensorDataQoS(), std::bind(&FeatureTrackerNode::imuCallback, this, std::placeholders::_1));
+    subImg_ = node_->create_subscription<sensor_msgs::msg::Image>("/cam0/image_raw", rclcpp::SensorDataQoS(), std::bind(&FeatureTrackerNode::imgCallback, this, std::placeholders::_1));
     min_feature_count_ = 50;
     max_feature_count_ = 20; // Maximal number of feature which is added at a time (not total)
     cv::namedWindow("Tracker");

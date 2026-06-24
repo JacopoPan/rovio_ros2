@@ -206,9 +206,9 @@ class RovioNode{
     gotFirstMessages_ = false;
 
     // Subscribe topics
-    subImu_ = node_->create_subscription<sensor_msgs::msg::Imu>("imu0", 1000, std::bind(&RovioNode::imuCallback, this, std::placeholders::_1));
-    subImg0_ = node_->create_subscription<sensor_msgs::msg::Image>("cam0/image_raw", 1000, std::bind(&RovioNode::imgCallback0, this, std::placeholders::_1));
-    subImg1_ = node_->create_subscription<sensor_msgs::msg::Image>("cam1/image_raw", 1000, std::bind(&RovioNode::imgCallback1, this, std::placeholders::_1));
+    subImu_ = node_->create_subscription<sensor_msgs::msg::Imu>("imu0", rclcpp::SensorDataQoS(), std::bind(&RovioNode::imuCallback, this, std::placeholders::_1));
+    subImg0_ = node_->create_subscription<sensor_msgs::msg::Image>("cam0/image_raw", rclcpp::SensorDataQoS(), std::bind(&RovioNode::imgCallback0, this, std::placeholders::_1));
+    subImg1_ = node_->create_subscription<sensor_msgs::msg::Image>("cam1/image_raw", rclcpp::SensorDataQoS(), std::bind(&RovioNode::imgCallback1, this, std::placeholders::_1));
     subGroundtruth_ = node_->create_subscription<geometry_msgs::msg::TransformStamped>("pose", 1000, std::bind(&RovioNode::groundtruthCallback, this, std::placeholders::_1));
     subGroundtruthOdometry_ = node_->create_subscription<nav_msgs::msg::Odometry>("odometry", 1000, std::bind(&RovioNode::groundtruthOdometryCallback, this, std::placeholders::_1));
     subVelocity_ = node_->create_subscription<geometry_msgs::msg::TwistStamped>("abss/twist", 1000, std::bind(&RovioNode::velocityCallback, this, std::placeholders::_1));
@@ -506,7 +506,7 @@ class RovioNode{
     // Get image from msg
     cv_bridge::CvImagePtr cv_ptr;
     try {
-      cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::TYPE_8UC1);
+      cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
     } catch (cv_bridge::Exception& e) {
       RCLCPP_ERROR(node_->get_logger(), "cv_bridge exception: %s", e.what());
       return;

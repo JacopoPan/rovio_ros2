@@ -27,7 +27,7 @@ colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=
                                                  -DMAKE_SCENE=ON -DCMAKE_BUILD_TYPE=Release
 
 source /aas/ros2_ws/install/setup.bash
-ros2 launch rovio rovio_node.launch.py
+ros2 launch rovio rovio_node.launch.py imu_topic:=/actual_topic cam0_topic:=/actual_topic cam1_topic:=/actual_topic
 ros2 launch rovio valgrind_rovio.launch.py    # Re-build with option -DENABLE_VALGRIND_COMPATIBILITY=ON, if necessary
 ```
 
