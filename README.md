@@ -54,10 +54,11 @@ ros2 bag play /absolute/path/to/V2_01_easy_ros2
 
 ## Further Notes
 
-* Camera matrix and distortion parameters should be provided by a YAML file or loaded through ROS parameters
-* The `cfg/rovio.info` provides most parameters for rovio. The camera extrinsics `qCM` (quaternion from IMU to camera frame, Hamilton-convention) and `MrMC` (Translation between IMU and Camera expressed in the IMU frame) should also be set there. They are being estimated during runtime so only a rough guess should be sufficient.
-* Especially for application with little motion fixing the IMU-camera extrinsics can be beneficial. This can be done by setting the parameter `doVECalibration` to `false`. Please be careful that the overall robustness and accuracy can be very sensitive to bad extrinsic calibrations.
+- Camera matrix and distortion parameters should be provided by a YAML file or loaded through ROS parameters
+- The `cfg/rovio.info` provides most parameters for rovio. The camera extrinsics `qCM` (quaternion from IMU to camera frame, Hamilton-convention) and `MrMC` (Translation between IMU and Camera expressed in the IMU frame) should also be set there. They are being estimated during runtime so only a rough guess should be sufficient.
+- Especially for application with little motion fixing the IMU-camera extrinsics can be beneficial. This can be done by setting the parameter `doVECalibration` to `false`. Please be careful that the overall robustness and accuracy can be very sensitive to bad extrinsic calibrations.
 
 Papers:
-* IROS 2015: http://dx.doi.org/10.3929/ethz-a-010566547
-* IJRR 2017: http://dx.doi.org/10.1177/0278364917728574
+
+- [Robust Visual Inertial Odometry Using a Direct EKF-Based Approach](http://dx.doi.org/10.3929/ethz-a-010566547) IROS 2015
+- [Iterated extended Kalman filter based visual-inertial odometry using direct photometric feedback](http://dx.doi.org/10.1177/0278364917728574) IJRR 2017
