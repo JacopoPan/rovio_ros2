@@ -126,7 +126,7 @@ class FeatureTrackerNode{
     pyr_.computeFromImage(img_,true);
 
     // Drawing
-    cvtColor(img_, draw_image_, cv::COLOR_GRAY2RGB);
+    cvtColor(img_, draw_image_, cv::COLOR_GRAY2BGR);
     const int numPatchesPlot = 10;
     draw_patches_ = cv::Mat::zeros(numPatchesPlot*(patchSize_*pow(2,nLevels_-1)+4),3*(patchSize_*pow(2,nLevels_-1)+4),CV_8UC1);
 
@@ -230,17 +230,18 @@ class FeatureTrackerNode{
     // Get new features, if there are too little valid MultilevelPatchFeature%s in the MultilevelPatchSet.
     if(fsm_.getValidCount() < min_feature_count_){
       FeatureCoordinatesVec candidates;
+      std::vector<uint8_t> fast_scores;
       RCLCPP_INFO_STREAM(node_->get_logger(), " Adding keypoints");
       const double t1 = (double) cv::getTickCount();
       for(int l=l1;l<=l2;l++){
-        pyr_.detectFastCorners(candidates,l,detectionThreshold);
+        pyr_.detectFastCorners(candidates, fast_scores, l, detectionThreshold);
       }
       const double t2 = (double) cv::getTickCount();
       RCLCPP_INFO_STREAM(node_->get_logger(), " == Detected " << candidates.size() << " on levels " << l1 << "-" << l2 << " (" << (t2-t1)/cv::getTickFrequency()*1000 << " ms)");
 //      pruneCandidates(fsm_,candidates,0);
       const double t3 = (double) cv::getTickCount();
 //      RCLCPP_INFO_STREAM(node_->get_logger(), " == Selected " << candidates.size() << " candidates (" << (t3-t2)/cv::getTickFrequency()*1000 << " ms)");
-      std::unordered_set<unsigned int> newSet = fsm_.addBestCandidates( candidates,pyr_,0,current_time,
+      std::unordered_set<unsigned int> newSet = fsm_.addBestCandidates( candidates, fast_scores, pyr_, 0, current_time,
                                                                         l1,l2,max_feature_count_,nDetectionBuckets_, scoreDetectionExponent_,
                                                                         penaltyDistance_, zeroDistancePenalty_,true,0.0);
       const double t4 = (double) cv::getTickCount();

@@ -471,7 +471,7 @@ class RovioNode{
         }
       }
 
-      std::cout << std::setprecision(12);
+      std::cout << std::setprecision(18);
       std::cout << "-- Filter: Initialized at t = " << rclcpp::Time(imu_msg->header.stamp).seconds() << std::endl;
       init_state_.state_ = FilterInitializationState::State::Initialized;
     }

@@ -1,5 +1,9 @@
 > [!NOTE]
 > This is a 1-to-1 porting for ROS2 Humble of the original ROS1 repo: https://github.com/ethz-asl/rovio
+>
+> Branch [`tudelft_rovio2`](https://github.com/JacopoPan/rovio_ros2/tree/tudelft_rovio2) implements the improvements in: https://github.com/tudelft/rovio2
+>
+> The repo is built for simulation in Gazebo and deployment on Jetson Orin in [`aerial-autonomy-stack`](https://github.com/JacopoPan/aerial-autonomy-stack)
 
 # ROVIO ROS2
 
