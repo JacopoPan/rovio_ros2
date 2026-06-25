@@ -40,6 +40,8 @@ The `rovio_node.launch.py` file loads parameters such that ROVIO runs properly o
 
 The datasets are available at: [www.research-collection.ethz.ch](https://www.research-collection.ethz.ch/entities/researchdata/bcaf173e-5dac-484b-bc37-faf97a594f1f)
 
+![euroc](https://github.com/user-attachments/assets/9ce3dc98-d07b-4b26-a6dc-464b0c495fb9)
+
 ```sh
 # Download and unzip, for example, "Vicon Room 2 Datasets (ZIP, 5734.81 MB)"
 cd vicon_room2/V2_01_easy/
