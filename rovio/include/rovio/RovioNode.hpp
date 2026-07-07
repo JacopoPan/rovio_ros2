@@ -35,7 +35,11 @@
 #include <chrono>
 #include <iomanip>
 
-#include <cv_bridge/cv_bridge.h>
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+  #include <cv_bridge/cv_bridge.hpp>   // Iron / Jazzy / newer
+#else
+  #include <cv_bridge/cv_bridge.h>     // Humble
+#endif
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
