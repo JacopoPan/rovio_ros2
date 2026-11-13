@@ -80,7 +80,7 @@ static rovio::RovioScene<mtFilter> mRovioScene;
 std::shared_ptr<rclcpp::Node> g_node;
 
 void idleFunc(){
-  rclcpp::spin_some(g_node);
+  rclcpp::spin_all(g_node, std::chrono::milliseconds(10)); // spin_some takes at most one message per subscription, per frame drawn
   mRovioScene.drawScene(mRovioScene.mpFilter_->safe_);
 }
 #endif

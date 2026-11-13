@@ -210,7 +210,7 @@ class RovioNode{
     gotFirstMessages_ = false;
 
     // Subscribe topics
-    subImu_ = node_->create_subscription<sensor_msgs::msg::Imu>("imu0", rclcpp::SensorDataQoS(), std::bind(&RovioNode::imuCallback, this, std::placeholders::_1));
+    subImu_ = node_->create_subscription<sensor_msgs::msg::Imu>("imu0", rclcpp::SensorDataQoS().keep_last(1000), std::bind(&RovioNode::imuCallback, this, std::placeholders::_1));
     subImg0_ = node_->create_subscription<sensor_msgs::msg::Image>("cam0/image_raw", rclcpp::SensorDataQoS(), std::bind(&RovioNode::imgCallback0, this, std::placeholders::_1));
     subImg1_ = node_->create_subscription<sensor_msgs::msg::Image>("cam1/image_raw", rclcpp::SensorDataQoS(), std::bind(&RovioNode::imgCallback1, this, std::placeholders::_1));
     subGroundtruth_ = node_->create_subscription<geometry_msgs::msg::TransformStamped>("pose", 1000, std::bind(&RovioNode::groundtruthCallback, this, std::placeholders::_1));
