@@ -244,6 +244,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable FeatureCoordinates alignedCoordinates_;
   mutable FeatureCoordinates tempCoordinates_;
   mutable FeatureCoordinatesVec candidates_;
+  mutable std::vector<uint8_t> fast_scores_;
   mutable cv::Point2f c_temp_;
   mutable Eigen::Matrix2d c_J_;
   mutable Eigen::Matrix2d A_red_;
@@ -419,7 +420,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           featureOutput_.c().drawPoint(drawImg_, cv::Scalar(175,175,0));
         }
       }
-      if(alignment_.getLinearAlignEquationsReduced(meas_.aux().pyr_[activeCamID],*state.aux().mpCurrentFeature_->mpMultilevelPatch_,featureOutput_.c(),endLevel_,startLevel_,A_red_,b_red_)){
+      if(alignment_.getLinearAlignEquationsReduced(meas_->aux().pyr_[activeCamID],*state.aux().mpCurrentFeature_->mpMultilevelPatch_,featureOutput_.c(),endLevel_,startLevel_,A_red_,b_red_)){
         y.template get<mtInnovation::_pix>() = b_red_ + noise.template get<mtNoise::_pix>();
         if(verbose_){
           std::cout << "    \033[32mMaking update with feature " << ID << " from camera " << camID << " in camera " << activeCamID << "\033[0m" << std::endl;
@@ -439,13 +440,14 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     }
   }
 
-  bool generateCandidates(const mtFilterState& filterState, mtState& candidate) const{
+  bool generateCandidates(const mtFilterState& filterState, mtState& candidate, int& zeros) const{
     candidate = filterState.state_;
 
     if(candidateCounter_ == 0){
       const int& ID = candidate.aux().activeFeature_;
       const int& camID = candidate.CfP(ID).camID_;
       const int activeCamID = (candidate.aux().activeCameraCounter_ + camID)%mtState::nCam_;
+      zeros = transformFeatureOutputCT_.getZeros();
       transformFeatureOutputCT_.setFeatureID(ID);
       transformFeatureOutputCT_.setOutputCameraID(activeCamID);
       transformFeatureOutputCT_.transformState(candidate,featureOutput_);
@@ -453,7 +455,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       mpMultiCamera_->cameras_[activeCamID].bearingToPixel(featureOutput_.c().get_nor(),c_temp_,c_J_);
 
       canditateGenerationH_  = -c_J_*featureOutputJac_.template block<2,mtState::D_>(0,0);
-      canditateGenerationPy_ = canditateGenerationH_*filterState.cov_*canditateGenerationH_.transpose();
+      canditateGenerationPy_ = canditateGenerationH_.template block<2,2>(0,zeros)*filterState.cov_.template block<2,2>(zeros,zeros)*canditateGenerationH_.template block<2,2>(0,zeros).transpose();
       candidateGenerationES_.compute(canditateGenerationPy_);
     }
 
@@ -466,7 +468,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           + pow(v*alignConvergencePixelRange_,2)/candidateGenerationES_.eigenvalues()(1).real() < pow(alignCoverageRatio_,2)){
         Eigen::Vector2d dy = u*alignConvergencePixelRange_*candidateGenerationES_.eigenvectors().col(0).real()
             + v*alignConvergencePixelRange_*candidateGenerationES_.eigenvectors().col(1).real();
-        canditateGenerationDifVec_ = -filterState.cov_*canditateGenerationH_.transpose()*canditateGenerationPy_.inverse()*dy;
+        const int cov_rows = 21 + 3 * ROVIO_NMAXFEATURE;
+        canditateGenerationDifVec_ = -filterState.cov_.template block<cov_rows,2>(0,zeros)*canditateGenerationH_.template block<2,2>(0,zeros).transpose()*canditateGenerationPy_.inverse()*dy;
         candidate.boxPlus(canditateGenerationDifVec_,candidate);
         return true;
       }
@@ -484,18 +487,18 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
 
     if(!hasConverged_){
       if(verbose_) std::cout << "    \033[31mREJECTED (iterations did no converge)\033[0m" << std::endl;
-      if(mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
+      if(mlpTemp1_.isMultilevelPatchInFrame(meas_->aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
         featureOutput_.c().drawPoint(drawImg_, cv::Scalar(255,0,0),1.0);
       }
       return false;
     }
 
     if(patchRejectionTh_ >= 0){
-      if(!mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
+      if(!mlpTemp1_.isMultilevelPatchInFrame(meas_->aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
         if(verbose_) std::cout << "    \033[31mREJECTED (not in frame)\033[0m" << std::endl;
         return false;
       }
-      mlpTemp1_.extractMultilevelPatchFromImage(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false);
+      mlpTemp1_.extractMultilevelPatchFromImage(meas_->aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false);
       const float avgError = mlpTemp1_.computeAverageDifference(*state.aux().mpCurrentFeature_->mpMultilevelPatch_,endLevel_,startLevel_);
       if(avgError > patchRejectionTh_){
         if(verbose_) std::cout << "    \033[31mREJECTED (error too large: " << avgError << ")\033[0m" << std::endl;
@@ -512,8 +515,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           d.setZero();
           d(i%2) = (i/2*2-1)*discriminativeSamplingDistance_;
           featureOutput_.boxPlus(d,sample);
-          if(mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],sample.c(),startLevel_,false)){
-            mlpTemp1_.extractMultilevelPatchFromImage(meas_.aux().pyr_[activeCamID],sample.c(),startLevel_,false);
+          if(mlpTemp1_.isMultilevelPatchInFrame(meas_->aux().pyr_[activeCamID],sample.c(),startLevel_,false)){
+            mlpTemp1_.extractMultilevelPatchFromImage(meas_->aux().pyr_[activeCamID],sample.c(),startLevel_,false);
             const float sampleError = mlpTemp1_.computeAverageDifference(*state.aux().mpCurrentFeature_->mpMultilevelPatch_,endLevel_,startLevel_);
             const bool isAboveThreshold = (discriminativeSamplingGain_ <= 1.0 & sampleError > patchRejectionTh_)
                 | (discriminativeSamplingGain_ > 1.0 & sampleError > discriminativeSamplingGain_*avgError);
@@ -543,7 +546,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
    *  @param F     - Jacobian for the update step of the filter.
    *  @param state - Filter state.
    */
-  void jacState(MXD& F, const mtState& state) const{
+  void jacState(MXD& F, const mtState& state, bool& itered) const{
     const int& ID = state.aux().activeFeature_;
     const int& camID = state.CfP(ID).camID_;
     const int activeCamID = (state.aux().activeCameraCounter_ + camID)%mtState::nCam_;
@@ -552,7 +555,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     transformFeatureOutputCT_.transformState(state,featureOutput_);
 
     if(useDirectMethod_){
-      if(alignment_.getLinearAlignEquationsReduced(meas_.aux().pyr_[activeCamID],*state.aux().mpCurrentFeature_->mpMultilevelPatch_,featureOutput_.c(),endLevel_,startLevel_,A_red_,b_red_)){
+      if(alignment_.getLinearAlignEquationsReduced(meas_->aux().pyr_[activeCamID],*state.aux().mpCurrentFeature_->mpMultilevelPatch_,featureOutput_.c(),endLevel_,startLevel_,A_red_,b_red_, itered)){
         transformFeatureOutputCT_.jacTransform(featureOutputJac_,state);
         mpMultiCamera_->cameras_[activeCamID].bearingToPixel(featureOutput_.c().get_nor(),c_temp_,c_J_);
         F = -A_red_*c_J_*featureOutputJac_.template block<2,mtState::D_>(0,0);
@@ -587,7 +590,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     assert(filterState.t_ == meas.aux().imgTime_);
     for(int i=0;i<mtState::nCam_;i++){
       if(doFrameVisualisation_){
-        cvtColor(meas.aux().pyr_[i].imgs_[0], filterState.img_[i], cv::COLOR_GRAY2RGB);
+        cvtColor(meas.aux().pyr_[i].imgs_[0], filterState.img_[i], cv::COLOR_GRAY2BGR);
       }
     }
     filterState.imgTime_ = filterState.t_;
@@ -984,12 +987,14 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         if(verbose_) std::cout << "Adding keypoints" << std::endl;
         const double t1 = (double) cv::getTickCount();
         candidates_.clear();
+        fast_scores_.clear();
         for(int l=endLevel_;l<=startLevel_;l++){
-          meas.aux().pyr_[camID].detectFastCorners(candidates_,l,fastDetectionThreshold_, mpMultiCamera_->cameras_[camID].valid_radius_);
+        // for(int l=startLevel_;l<=startLevel_;l++){ // TUDelft fast implementation
+          meas.aux().pyr_[camID].detectFastCorners(candidates_, fast_scores_, l, fastDetectionThreshold_, mpMultiCamera_->cameras_[camID].valid_radius_);
         }
         const double t2 = (double) cv::getTickCount();
         if(verbose_) std::cout << "== Detected " << candidates_.size() << " on levels " << endLevel_ << "-" << startLevel_ << " (" << (t2-t1)/cv::getTickFrequency()*1000 << " ms)" << std::endl;
-        std::unordered_set<unsigned int> newSet = filterState.fsm_.addBestCandidates(candidates_,meas.aux().pyr_[camID],camID,filterState.t_,
+        std::unordered_set<unsigned int> newSet = filterState.fsm_.addBestCandidates(candidates_, fast_scores_, meas.aux().pyr_[camID], camID, filterState.t_,
                                                                     endLevel_,startLevel_,(mtState::nMax_-filterState.fsm_.getValidCount())/(mtState::nCam_-camID),nDetectionBuckets_, scoreDetectionExponent_,
                                                                     penaltyDistance_, zeroDistancePenalty_,false,minAbsoluteSTScore_);
         const double t3 = (double) cv::getTickCount();
